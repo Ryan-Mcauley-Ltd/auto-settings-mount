@@ -1,0 +1,18 @@
+name: Merge Branches on Schedule
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_branch:
+        description: "Source branch"
+        required: true
+      to_branch:
+        description: "Target branch"
+        required: true
+
+jobs:
+  merge:
+    uses: Ryan-Mcauley-Ltd/auto-settings-mount/.github/workflows/master.yml@master
+    with:
+      from_branch: ${{ github.event.inputs.from_branch }}
+      to_branch: ${{ github.event.inputs.to_branch }}

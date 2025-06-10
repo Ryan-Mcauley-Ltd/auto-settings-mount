@@ -1,0 +1,15 @@
+name: Inject Schedule Settings
+
+on:
+  workflow_dispatch:
+    inputs:
+      section_dir:
+        description: "Path to the sections directory"
+        required: false
+        default: "sections"
+
+jobs:
+  inject:
+    uses: Ryan-Mcauley-Ltd/auto-settings-mount/.github/workflows/settings-mount.yml@master
+    with:
+      section_dir: ${{ github.event.inputs.section_dir }}

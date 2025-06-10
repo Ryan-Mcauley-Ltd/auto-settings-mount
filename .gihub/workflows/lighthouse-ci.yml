@@ -1,0 +1,17 @@
+name: Shopify Lighthouse CI
+
+on:
+  workflow_run:
+    workflows: ["Merge Branches on Schedule"]
+    types:
+      - completed
+
+jobs:
+  lighthouse:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    uses: Ryan-Mcauley-Ltd/auto-settings-mount/.github/workflows/lighthouse-ci.yml@master
+    with:
+      store: ${{ secrets.SHOP_STORE }}
+      password: ${{ secrets.SHOP_PASSWORD }}
+      access_token: ${{ secrets.SHOP_ACCESS_TOKEN }}
+      notify_emails: "ryan.mcauley@swankyagency.com,dev-team@example.com"
