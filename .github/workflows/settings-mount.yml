@@ -1,15 +1,31 @@
-name: Inject Schedule Settings
+name: Reusable - Inject Schedule Settings
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       section_dir:
-        description: "Path to the sections directory"
         required: false
+        type: string
         default: "sections"
 
 jobs:
   inject:
-    uses: Ryan-Mcauley-Ltd/auto-settings-mount/.github/workflows/settings-mount.yml@master
-    with:
-      section_dir: ${{ github.event.inputs.section_dir }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Download schedule injector script
+        run: |
+          mkdir -p scripts
+          curl -sSL https://raw.githubusercontent.com/Ryan-Mcauley-Ltd/auto-settings-mount/main/apply-schedule-settings.js -o scripts/apply-schedule-settings.js
+
+      - name: Run injector script
+        run: |
+          node scripts/apply-schedule-settings.js ${{ inputs.section_dir }}

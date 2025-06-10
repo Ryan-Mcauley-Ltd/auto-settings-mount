@@ -1,17 +1,65 @@
-name: Shopify Lighthouse CI
+name: Reusable - Shopify Lighthouse CI
 
 on:
-  workflow_run:
-    workflows: ["Merge Branches on Schedule"]
-    types:
-      - completed
+  workflow_call:
+    inputs:
+      store:
+        required: true
+        type: string
+      password:
+        required: true
+        type: string
+      access_token:
+        required: true
+        type: string
+      notify_emails:
+        required: true
+        type: string
 
 jobs:
-  lighthouse:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    uses: Ryan-Mcauley-Ltd/auto-settings-mount/.github/workflows/lighthouse-ci.yml@master
-    with:
-      store: ${{ secrets.SHOP_STORE }}
-      password: ${{ secrets.SHOP_PASSWORD }}
-      access_token: ${{ secrets.SHOP_ACCESS_TOKEN }}
-      notify_emails: "ryan.mcauley@swankyagency.com,dev-team@example.com"
+  lhci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Wait for theme to be ready
+        run: sleep 30
+
+      - name: Lighthouse
+        uses: shopify/lighthouse-ci-action@v1
+        with:
+          access_token: ${{ inputs.access_token }}
+          store: ${{ inputs.store }}
+          password: ${{ inputs.password }}
+
+      - name: Send email on success
+        if: ${{ success() }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "✅ Lighthouse CI Passed for ${{ github.repository }}"
+          body: |
+            Lighthouse audit passed on branch: ${{ github.ref }}.
+            View run:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ inputs.notify_emails }}
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+
+      - name: Send email on failure
+        if: ${{ failure() }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "❌ Lighthouse CI Failed for ${{ github.repository }}"
+          body: |
+            Lighthouse audit failed on branch: ${{ github.ref }}.
+            View logs:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ inputs.notify_emails }}
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
