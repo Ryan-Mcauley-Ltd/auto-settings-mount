@@ -13,9 +13,6 @@ on:
       REPO_TOKEN: # Declare the secret
         required: true
 
-permissions:
-  contents: write # Required for pushing changes
-
 jobs:
   merge:
     runs-on: ubuntu-latest
