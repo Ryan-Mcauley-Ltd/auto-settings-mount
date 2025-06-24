@@ -53,8 +53,14 @@ jobs:
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "✅ Lighthouse CI Passed"
           body: |
-            Lighthouse audit passed on branch: ${{ inputs.from_branch }}
+            Lighthouse audit passed on branch: ${{ inputs.from_branch }}.
+
+            🔗 [View Lighthouse report](${{ steps.lighthouse.outputs.report_url }})
+
             Proceeding to merge into: ${{ inputs.to_branch }}
+
+            Workflow run:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           to: ryan.mcauley@swankyagency.com
           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
 
