@@ -1,0 +1,55 @@
+name: Cherry-pick Commits
+
+on:
+  workflow_call:
+    inputs:
+      to_branch:
+        required: true
+        type: string
+      cherry_pick_commits:
+        required: true
+        type: string
+
+    secrets:
+      PERSONAL_ACCESS_TOKEN:
+        required: true
+
+jobs:
+  batch_cherry_pick:
+    if: ${{ !contains(inputs.to_branch, 'main') && !contains(inputs.to_branch, 'develop') && !contains(inputs.to_branch, 'stores/production') && !contains(inputs.to_branch, 'stores/staging') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.to_branch }}
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: 🛠 Setup Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: 🔀 Cherry-pick all commits
+        run: |
+          IFS=',' read -ra COMMITS <<< "${{ inputs.cherry_pick_commits }}"
+          for COMMIT in "${COMMITS[@]}"; do
+            echo "➡️ Cherry-picking $COMMIT"
+            git cherry-pick "$COMMIT" || {
+              echo "⚠️ Conflict. Using theirs version."
+              git status --porcelain | grep '^UU ' | cut -c 4- | while read file; do
+                git checkout --theirs -- "$file"
+                git add "$file"
+              done
+              git cherry-pick --continue
+            }
+          done
+
+      - name: 🚀 Push to branch
+        env:
+          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          git remote set-url origin https://x-access-token:${TOKEN}@github.com/${{ github.repository }}
+          git push origin HEAD:${{ inputs.to_branch }}
