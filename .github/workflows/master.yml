@@ -1,3 +1,43 @@
+# name: Reusable - Merge Branches
+
+# on:
+#   workflow_call:
+#     inputs:
+#       from_branch:
+#         required: true
+#         type: string
+#       to_branch:
+#         required: true
+#         type: string
+#     secrets:
+#       REPO_TOKEN: # Declare the secret
+#         required: true
+
+# jobs:
+#   merge:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout target branch
+#         uses: actions/checkout@v4
+#         with:
+#           ref: ${{ inputs.to_branch }}
+#           token: ${{ secrets.REPO_TOKEN }} # Reference the declared secret
+
+#       - name: Merge from source branch
+#         run: |
+#           git config user.name "Content Scheduler Bot"
+#           git config user.email "actions@github.com"
+#           git fetch origin ${{ inputs.from_branch }}
+#           if ! git merge origin/${{ inputs.from_branch }} -X theirs --allow-unrelated-histories --no-edit; then
+#             echo "Merge conflict detected. Aborting."
+#             exit 1
+#           fi
+
+#       - name: Push changes
+#         run: |
+#           git push origin HEAD:${{ inputs.to_branch }}
+
+
 name: Reusable - Merge Branches
 
 on:
@@ -10,18 +50,19 @@ on:
         required: true
         type: string
     secrets:
-      REPO_TOKEN: # Declare the secret
+      REPO_TOKEN:
         required: true
 
 jobs:
   merge:
+    if: ${{ !contains('main,develop,stores/production,stores/staging', inputs.from_branch) && !contains('main,develop,stores/production,stores/staging', inputs.to_branch) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout target branch
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.to_branch }}
-          token: ${{ secrets.REPO_TOKEN }} # Reference the declared secret
+          token: ${{ secrets.REPO_TOKEN }}
 
       - name: Merge from source branch
         run: |

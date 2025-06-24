@@ -1,3 +1,69 @@
+# name: Reusable - Shopify Lighthouse CI
+
+# on:
+#   workflow_call:
+#     inputs:
+#       store:
+#         required: true
+#         type: string
+#       password:
+#         required: true
+#         type: string
+#       access_token:
+#         required: true
+#         type: string
+#       notify_emails:
+#         required: true
+#         type: string
+
+# jobs:
+#   lhci:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v2
+
+#       - name: Wait for theme to be ready
+#         run: sleep 30
+
+#       - name: Lighthouse
+#         uses: shopify/lighthouse-ci-action@v1
+#         with:
+#           access_token: ${{ inputs.access_token }}
+#           store: ${{ inputs.store }}
+#           password: ${{ inputs.password }}
+
+#       - name: Send email on success
+#         if: ${{ success() }}
+#         uses: dawidd6/action-send-mail@v3
+#         with:
+#           server_address: smtp.gmail.com
+#           server_port: 465
+#           username: ${{ secrets.SMTP_USERNAME }}
+#           password: ${{ secrets.SMTP_PASSWORD }}
+#           subject: "✅ Lighthouse CI Passed for ${{ github.repository }}"
+#           body: |
+#             Lighthouse audit passed on branch: ${{ github.ref }}.
+#             View run:
+#             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+#           to: ${{ inputs.notify_emails }}
+#           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+
+#       - name: Send email on failure
+#         if: ${{ failure() }}
+#         uses: dawidd6/action-send-mail@v3
+#         with:
+#           server_address: smtp.gmail.com
+#           server_port: 465
+#           username: ${{ secrets.SMTP_USERNAME }}
+#           password: ${{ secrets.SMTP_PASSWORD }}
+#           subject: "❌ Lighthouse CI Failed for ${{ github.repository }}"
+#           body: |
+#             Lighthouse audit failed on branch: ${{ github.ref }}.
+#             View logs:
+#             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+#           to: ${{ inputs.notify_emails }}
+#           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+
 name: Reusable - Shopify Lighthouse CI
 
 on:
@@ -18,6 +84,7 @@ on:
 
 jobs:
   lhci:
+    if: ${{ !contains(github.ref, 'main') && !contains(github.ref, 'develop') && !contains(github.ref, 'stores/production') && !contains(github.ref, 'stores/staging') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

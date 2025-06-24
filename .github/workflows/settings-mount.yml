@@ -1,3 +1,31 @@
+# name: Reusable - Inject Schedule Settings
+
+# on:
+#   workflow_call:
+
+# jobs:
+#   inject:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout repo
+#         uses: actions/checkout@v4
+
+#       - name: Set up Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: "20"
+
+#       - name: Download schedule injector script
+#         run: |
+#           mkdir -p scripts
+#           curl -sSL https://raw.githubusercontent.com/Ryan-Mcauley-Ltd/auto-settings-mount/master/apply-schedule-settings.js -o scripts/apply-schedule-settings.js
+
+#       - name: Run injector script
+#         run: |
+#           node scripts/apply-schedule-settings.js sections
+
+
 name: Reusable - Inject Schedule Settings
 
 on:
@@ -5,6 +33,7 @@ on:
 
 jobs:
   inject:
+    if: ${{ !contains(github.ref, 'main') && !contains(github.ref, 'develop') && !contains(github.ref, 'stores/production') && !contains(github.ref, 'stores/staging') }}
     runs-on: ubuntu-latest
 
     steps:
