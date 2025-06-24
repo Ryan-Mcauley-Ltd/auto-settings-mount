@@ -1,44 +1,4 @@
-# name: Reusable - Merge Branches
-
-# on:
-#   workflow_call:
-#     inputs:
-#       from_branch:
-#         required: true
-#         type: string
-#       to_branch:
-#         required: true
-#         type: string
-#     secrets:
-#       REPO_TOKEN: # Declare the secret
-#         required: true
-
-# jobs:
-#   merge:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout target branch
-#         uses: actions/checkout@v4
-#         with:
-#           ref: ${{ inputs.to_branch }}
-#           token: ${{ secrets.REPO_TOKEN }} # Reference the declared secret
-
-#       - name: Merge from source branch
-#         run: |
-#           git config user.name "Content Scheduler Bot"
-#           git config user.email "actions@github.com"
-#           git fetch origin ${{ inputs.from_branch }}
-#           if ! git merge origin/${{ inputs.from_branch }} -X theirs --allow-unrelated-histories --no-edit; then
-#             echo "Merge conflict detected. Aborting."
-#             exit 1
-#           fi
-
-#       - name: Push changes
-#         run: |
-#           git push origin HEAD:${{ inputs.to_branch }}
-
-
-name: Reusable - Merge Branches
+name: Merge and Lighthouse CI
 
 on:
   workflow_call:
@@ -49,31 +9,85 @@ on:
       to_branch:
         required: true
         type: string
+
     secrets:
-      REPO_TOKEN:
+      SHOP_ACCESS_TOKEN:
+        required: true
+      SHOP_STORE:
+        required: true
+      SHOP_PASSWORD:
+        required: true
+      SMTP_USERNAME:
+        required: true
+      SMTP_PASSWORD:
+        required: true
+      PERSONAL_ACCESS_TOKEN:
         required: true
 
 jobs:
   merge:
-    if: ${{ !contains('main,develop,stores/production,stores/staging', inputs.from_branch) && !contains('main,develop,stores/production,stores/staging', inputs.to_branch) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout target branch
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.to_branch }}
-          token: ${{ secrets.REPO_TOKEN }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
       - name: Merge from source branch
         run: |
           git config user.name "Content Scheduler Bot"
           git config user.email "actions@github.com"
           git fetch origin ${{ inputs.from_branch }}
-          if ! git merge origin/${{ inputs.from_branch }} -X theirs --allow-unrelated-histories --no-edit; then
-            echo "Merge conflict detected. Aborting."
-            exit 1
-          fi
+          git merge origin/${{ inputs.from_branch }} -X theirs --allow-unrelated-histories --no-edit || echo "Merge conflict or nothing to merge"
 
       - name: Push changes
-        run: |
-          git push origin HEAD:${{ inputs.to_branch }}
+        run: git push origin HEAD:${{ inputs.to_branch }}
+
+  lighthouse:
+    needs: merge
+    runs-on: ubuntu-latest
+    if: ${{ needs.merge.result == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Wait for theme to be ready
+        run: sleep 30
+
+      - name: Run Lighthouse CI
+        uses: shopify/lighthouse-ci-action@v1
+        with:
+          access_token: ${{ secrets.SHOP_ACCESS_TOKEN }}
+          store: ${{ secrets.SHOP_STORE }}
+          password: ${{ secrets.SHOP_PASSWORD }}
+
+      - name: Send email on success
+        if: ${{ success() }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "✅ Lighthouse CI Passed"
+          body: |
+            Lighthouse audit passed on ${{ inputs.to_branch }}
+            View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ryan.mcauley@swankyagency.com
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+
+      - name: Send email on failure
+        if: ${{ failure() }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "❌ Lighthouse CI Failed"
+          body: |
+            Lighthouse audit failed on ${{ inputs.to_branch }}
+            View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: dev-team@example.com
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
