@@ -25,33 +25,13 @@ on:
         required: true
 
 jobs:
-  merge:
-    if: ${{ !contains('main,develop,stores/production,stores/staging', inputs.from_branch) && !contains('main,develop,stores/production,stores/staging', inputs.to_branch) }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout target branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.to_branch }}
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-
-      - name: Merge from source branch
-        run: |
-          git config user.name "Content Scheduler Bot"
-          git config user.email "actions@github.com"
-          git fetch origin ${{ inputs.from_branch }}
-          git merge origin/${{ inputs.from_branch }} -X theirs --allow-unrelated-histories --no-edit || echo "Merge conflict or nothing to merge"
-
-      - name: Push changes
-        run: git push origin HEAD:${{ inputs.to_branch }}
-
   lighthouse:
-    needs: merge
     runs-on: ubuntu-latest
-    if: ${{ needs.merge.result == 'success' }}
-
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.from_branch }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
       - name: Wait for theme to be ready
         run: sleep 30
@@ -73,8 +53,8 @@ jobs:
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "✅ Lighthouse CI Passed"
           body: |
-            Lighthouse audit passed on ${{ inputs.to_branch }}
-            View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Lighthouse audit passed on branch: ${{ inputs.from_branch }}
+            Proceeding to merge into: ${{ inputs.to_branch }}
           to: ryan.mcauley@swankyagency.com
           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
 
@@ -88,7 +68,30 @@ jobs:
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "❌ Lighthouse CI Failed"
           body: |
-            Lighthouse audit failed on ${{ inputs.to_branch }}
-            View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Lighthouse audit failed on branch: ${{ inputs.from_branch }}.
+            Merge into ${{ inputs.to_branch }} was **not** performed.
+            View logs:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           to: dev-team@example.com
           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
+
+  merge:
+    needs: lighthouse
+    if: ${{ needs.lighthouse.result == 'success' && !contains('main,develop,stores/production,stores/staging', inputs.from_branch) && !contains('main,develop,stores/production,stores/staging', inputs.to_branch) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.to_branch }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Merge from source branch
+        run: |
+          git config user.name "Content Scheduler Bot"
+          git config user.email "actions@github.com"
+          git fetch origin ${{ inputs.from_branch }}
+          git merge origin/${{ inputs.from_branch }} -X theirs --allow-unrelated-histories --no-edit || echo "Merge conflict or nothing to merge"
+
+      - name: Push changes
+        run: git push origin HEAD:${{ inputs.to_branch }}
