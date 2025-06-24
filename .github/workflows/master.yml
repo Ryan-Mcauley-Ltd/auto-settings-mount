@@ -26,56 +26,55 @@ on:
 
 jobs:
   lighthouse:
-      needs: merge
-      runs-on: ubuntu-latest
-      if: ${{ needs.merge.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.from_branch }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
-      steps:
-        - uses: actions/checkout@v2
+      - name: Wait for theme to be ready
+        run: sleep 30
 
-        - name: Wait for theme to be ready
-          run: sleep 30
+      - name: Run Lighthouse CI
+        uses: shopify/lighthouse-ci-action@v1
+        with:
+          access_token: ${{ secrets.SHOP_ACCESS_TOKEN }}
+          store: ${{ secrets.SHOP_STORE }}
+          password: ${{ secrets.SHOP_PASSWORD }}
 
-        - name: Run Lighthouse CI and capture report URL
-          id: lighthouse
-          run: |
-            set -e
-            npx @lhci/cli@0.12.x autorun > lhci-output.txt || true
-            echo "--- LHCI Output ---"
-            cat lhci-output.txt
+      - name: Send email on success
+        if: ${{ success() }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "✅ Lighthouse CI Passed"
+          body: |
+            Lighthouse audit passed on branch: ${{ inputs.from_branch }}
+            Proceeding to merge into: ${{ inputs.to_branch }}
+          to: ryan.mcauley@swankyagency.com
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
 
-            # Extract report URL
-            report_url=$(grep -o 'https://googlechrome.github.io/lighthouse-ci/viewer/[^[:space:]]*' lhci-output.txt | head -n 1)
+      - name: Send email on failure
+        if: ${{ failure() }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "❌ Lighthouse CI Failed"
+          body: |
+            Lighthouse audit failed on branch: ${{ inputs.from_branch }}.
+            Merge into ${{ inputs.to_branch }} was **not** performed.
+            View logs:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: dev-team@example.com
+          from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
 
-            echo "Report URL: $report_url"
-
-            # Export as GitHub Actions output
-            echo "report_url=$report_url" >> $GITHUB_OUTPUT
-
-          env:
-            LHCI_GITHUB_TOKEN: ${{ secrets.SHOP_ACCESS_TOKEN }}
-
-        - name: Send email on success
-          if: ${{ success() }}
-          uses: dawidd6/action-send-mail@v3
-          with:
-            server_address: smtp.gmail.com
-            server_port: 465
-            username: ${{ secrets.SMTP_USERNAME }}
-            password: ${{ secrets.SMTP_PASSWORD }}
-            subject: "✅ Lighthouse CI Passed"
-            body: |
-              Lighthouse audit passed on branch: `${{ inputs.from_branch }}`
-
-              🔗 View Lighthouse report:
-              ${{ steps.lighthouse.outputs.report_url }}
-
-              ✅ Proceeding to merge into `${{ inputs.to_branch }}`
-
-              🔍 Workflow run:
-              ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            to: ryan.mcauley@swankyagency.com
-            from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
   merge:
     needs: lighthouse
     if: ${{ needs.lighthouse.result == 'success' && !contains('main,develop,stores/production,stores/staging', inputs.from_branch) && !contains('main,develop,stores/production,stores/staging', inputs.to_branch) }}
