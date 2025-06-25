@@ -26,6 +26,7 @@ on:
 
 jobs:
   lighthouse:
+    if: ${{ !contains('main,develop,stores/production,stores/staging', inputs.from_branch) && !contains('main,develop,stores/production,stores/staging', inputs.to_branch) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
