@@ -26,7 +26,7 @@ on:
 
 jobs:
   lighthouse:
-    if: ${{ !contains('main,develop,stores/production,stores/staging', inputs.from_branch) && !contains('main,develop,stores/production,stores/staging', inputs.to_branch) }}
+    if: ${{ inputs.from_branch == 'feature/schedule-staging' && inputs.to_branch == 'feature/schedule-production' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -78,7 +78,7 @@ jobs:
 
   merge:
     needs: lighthouse
-    if: ${{ needs.lighthouse.result == 'success' && !contains('main,develop,stores/production,stores/staging', inputs.from_branch) && !contains('main,develop,stores/production,stores/staging', inputs.to_branch) }}
+    if: ${{ inputs.from_branch == 'feature/schedule-staging' && inputs.to_branch == 'feature/schedule-production' && needs.lighthouse.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout target branch
