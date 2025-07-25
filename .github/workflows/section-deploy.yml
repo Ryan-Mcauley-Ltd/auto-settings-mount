@@ -16,7 +16,7 @@ on:
 
 jobs:
   batch_cherry_pick:
-    if: ${{ inputs.from_branch == 'feature/schedule-staging' && inputs.to_branch == 'feature/schedule-production' }}
+    if: ${{ inputs.from_branch == 'feature/a-schedule-staging' && inputs.to_branch == 'feature/a-schedule-production' }}
     runs-on: ubuntu-latest
 
     steps:
