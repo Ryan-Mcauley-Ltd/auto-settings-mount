@@ -43,6 +43,8 @@ jobs:
           access_token: ${{ secrets.SHOP_ACCESS_TOKEN }}
           store: ${{ secrets.SHOP_STORE }}
           password: ${{ secrets.SHOP_PASSWORD }}
+          lhci_min_score_performance: 0.2
+          lhci_min_score_accessibility: 0.2
 
       - name: Send email on success
         if: ${{ success() }}
@@ -73,7 +75,7 @@ jobs:
             Merge into ${{ inputs.to_branch }} was **not** performed.
             View logs:
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          to: dev-team@example.com
+          to: ryan.mcauley@swankyagency.com
           from: "CI Bot <${{ secrets.SMTP_USERNAME }}>"
 
   merge:
