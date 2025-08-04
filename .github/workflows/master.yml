@@ -80,7 +80,7 @@ jobs:
 
   merge:
     needs: lighthouse
-    if: ${{ inputs.from_branch == 'feature/schedule-staging' && inputs.to_branch == 'feature/schedule-production' && needs.lighthouse.result == 'success' }}
+    if: ${{ inputs.from_branch == 'feature/a-schedule-staging' && inputs.to_branch == 'feature/a-schedule-production' && needs.lighthouse.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout target branch
